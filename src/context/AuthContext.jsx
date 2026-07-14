@@ -1,81 +1,89 @@
 import { createContext, useContext, useEffect, useMemo, useState } from 'react';
 
 const AuthContext = createContext(null);
-const USERS_KEY = 'voyageiq-users';
-const SESSION_KEY = 'voyageiq-session';
-
-function readStorage(key, fallback) {
-  try {
-    const savedValue = localStorage.getItem(key);
-    return savedValue ? JSON.parse(savedValue) : fallback;
-  } catch {
-    return fallback;
-  }
-}
-
-function saveStorage(key, value) {
-  localStorage.setItem(key, JSON.stringify(value));
-}
-
-function createUserId() {
-  if (crypto.randomUUID) {
-    return crypto.randomUUID();
-  }
-
-  return `user-${Date.now()}-${Math.random().toString(16).slice(2)}`;
-}
+const TOKEN_KEY = 'voyageiq-token';
 
 export function AuthProvider({ children }) {
-  const [users, setUsers] = useState(() => readStorage(USERS_KEY, []));
-  const [currentUser, setCurrentUser] = useState(() => readStorage(SESSION_KEY, null));
+  const [currentUser, setCurrentUser] = useState(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    saveStorage(USERS_KEY, users);
-  }, [users]);
+    async function loadUser() {
+      const token = localStorage.getItem(TOKEN_KEY);
+      if (!token) {
+        setLoading(false);
+        return;
+      }
 
-  useEffect(() => {
-    if (currentUser) {
-      saveStorage(SESSION_KEY, currentUser);
-    } else {
-      localStorage.removeItem(SESSION_KEY);
+      try {
+        const response = await fetch('/api/auth/me', {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+        if (response.ok) {
+          const user = await response.json();
+          setCurrentUser(user);
+        } else {
+          localStorage.removeItem(TOKEN_KEY);
+        }
+      } catch (err) {
+        console.error("Failed to load user info:", err);
+      } finally {
+        setLoading(false);
+      }
     }
-  }, [currentUser]);
+    loadUser();
+  }, []);
 
-  const register = ({ name, email, password }) => {
-    const normalizedEmail = email.trim().toLowerCase();
-    const userExists = users.some((user) => user.email === normalizedEmail);
-
-    if (userExists) {
-      return { ok: false, message: 'An account with this email already exists.' };
+  const register = async ({ name, email, password }) => {
+    try {
+      const response = await fetch('/api/auth/register', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ name, email, password })
+      });
+      
+      const data = await response.json();
+      if (!response.ok) {
+        return { ok: false, message: data.detail || 'Registration failed' };
+      }
+      
+      localStorage.setItem(TOKEN_KEY, data.token);
+      setCurrentUser(data.user);
+      return { ok: true };
+    } catch (err) {
+      return { ok: false, message: 'Connection to backend server failed.' };
     }
-
-    const newUser = {
-      id: createUserId(),
-      name: name.trim(),
-      email: normalizedEmail,
-      password,
-    };
-
-    setUsers((savedUsers) => [...savedUsers, newUser]);
-    setCurrentUser({ id: newUser.id, name: newUser.name, email: newUser.email });
-    return { ok: true };
   };
 
-  const login = ({ email, password }) => {
-    const normalizedEmail = email.trim().toLowerCase();
-    const user = users.find(
-      (savedUser) => savedUser.email === normalizedEmail && savedUser.password === password,
-    );
-
-    if (!user) {
-      return { ok: false, message: 'Please check your email and password.' };
+  const login = async ({ email, password }) => {
+    try {
+      const response = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ email, password })
+      });
+      
+      const data = await response.json();
+      if (!response.ok) {
+        return { ok: false, message: data.detail || 'Login failed.' };
+      }
+      
+      localStorage.setItem(TOKEN_KEY, data.token);
+      setCurrentUser(data.user);
+      return { ok: true };
+    } catch (err) {
+      return { ok: false, message: 'Connection to backend server failed.' };
     }
-
-    setCurrentUser({ id: user.id, name: user.name, email: user.email });
-    return { ok: true };
   };
 
   const logout = () => {
+    localStorage.removeItem(TOKEN_KEY);
     setCurrentUser(null);
   };
 
@@ -83,11 +91,12 @@ export function AuthProvider({ children }) {
     () => ({
       currentUser,
       isAuthenticated: Boolean(currentUser),
+      loading,
       login,
       logout,
       register,
     }),
-    [currentUser, users],
+    [currentUser, loading],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
@@ -102,3 +111,4 @@ export function useAuth() {
 
   return context;
 }
+

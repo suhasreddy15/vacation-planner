@@ -1,7 +1,6 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import SearchBar from '../../components/SearchBar/SearchBar.jsx';
 import TripCard from '../../components/TripCard/TripCard.jsx';
-import { trips } from '../../data/trips.js';
 import './BookTrip.css';
 
 const categories = ['Beach', 'Mountains', 'Adventure', 'Family', 'Honeymoon'];
@@ -9,6 +8,28 @@ const categories = ['Beach', 'Mountains', 'Adventure', 'Family', 'Honeymoon'];
 function BookTrip() {
   const [query, setQuery] = useState('');
   const [category, setCategory] = useState('All');
+  const [trips, setTrips] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    async function fetchTrips() {
+      try {
+        setLoading(true);
+        const response = await fetch('/api/trips');
+        if (!response.ok) {
+          throw new Error('Failed to load vacation packages.');
+        }
+        const data = await response.json();
+        setTrips(data);
+      } catch (err) {
+        setError(err.message);
+      } finally {
+        setLoading(false);
+      }
+    }
+    fetchTrips();
+  }, []);
 
   const filteredTrips = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();
@@ -24,7 +45,7 @@ function BookTrip() {
 
       return matchesCategory && matchesQuery;
     });
-  }, [category, query]);
+  }, [category, query, trips]);
 
   return (
     <>
@@ -63,11 +84,25 @@ function BookTrip() {
             </div>
           </div>
 
-          <div className="trip-grid">
-            {filteredTrips.map((trip) => (
-              <TripCard trip={trip} key={trip.id} />
-            ))}
-          </div>
+          {loading ? (
+            <div style={{ textAlign: 'center', padding: '4rem 0', color: 'var(--text-muted)', fontStyle: 'italic' }}>
+              Loading curated packages...
+            </div>
+          ) : error ? (
+            <div style={{ textAlign: 'center', padding: '4rem 0', color: 'var(--accent-red)' }}>
+              Error loading trips: {error}
+            </div>
+          ) : filteredTrips.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: '4rem 0', color: 'var(--text-muted)' }}>
+              No trips found matching your filters.
+            </div>
+          ) : (
+            <div className="trip-grid">
+              {filteredTrips.map((trip) => (
+                <TripCard trip={trip} key={trip.id} />
+              ))}
+            </div>
+          )}
         </div>
       </section>
     </>
@@ -75,3 +110,4 @@ function BookTrip() {
 }
 
 export default BookTrip;
+
