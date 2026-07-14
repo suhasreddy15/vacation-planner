@@ -15,6 +15,7 @@ function Auth({ mode }) {
     email: '',
     password: '',
     confirmPassword: '',
+    role: 'traveler',
   });
   const [error, setError] = useState('');
 
@@ -138,6 +139,34 @@ function Auth({ mode }) {
                   value={formData.confirmPassword}
                   onChange={updateField}
                 />
+              </span>
+            </label>
+          )}
+
+          {isRegister && (
+            <label>
+              Account Type
+              <span>
+                <FiUser />
+                <select
+                  name="role"
+                  value={formData.role}
+                  onChange={updateField}
+                  style={{
+                    width: '100%',
+                    padding: '0.8rem 1rem 0.8rem 2.5rem',
+                    border: '1px solid var(--border-color, #e2e8f0)',
+                    borderRadius: '8px',
+                    backgroundColor: 'var(--card-background, #fff)',
+                    color: 'inherit',
+                    outline: 'none',
+                    fontSize: '0.95rem',
+                    cursor: 'pointer'
+                  }}
+                >
+                  <option value="traveler">Traveler (Explore & Book Trips)</option>
+                  <option value="organizer">Trip Organizer (Create & Manage Trips)</option>
+                </select>
               </span>
             </label>
           )}

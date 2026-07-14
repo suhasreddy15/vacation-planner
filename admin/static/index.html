@@ -1,0 +1,620 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>VoyageIQ Organizer Admin Portal</title>
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <!-- Custom CSS -->
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <!-- ================= LOGIN WRAPPER ================= -->
+  <div id="login-wrapper" class="login-wrapper active">
+    <div class="login-box">
+      <div class="login-header">
+        <i data-lucide="compass" class="login-logo-icon"></i>
+        <h1>Voyage<span>IQ</span></h1>
+        <p>Private Organizer Admin Console</p>
+      </div>
+      <form id="login-form">
+        <div id="login-error" class="alert alert-error" style="display:none; margin-bottom:1rem;"></div>
+        <label>
+          Email Address
+          <span>
+            <i data-lucide="mail"></i>
+            <input type="email" id="login-email" required placeholder="organizer@voyageiq.com">
+          </span>
+        </label>
+        <label style="margin-top: 1rem;">
+          Password
+          <span>
+            <i data-lucide="lock"></i>
+            <input type="password" id="login-password" required placeholder="••••••••">
+          </span>
+        </label>
+        <button type="submit" class="btn btn-primary" style="width:100%; margin-top:1.5rem; justify-content:center;">
+          Secure Authorization Login
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- ================= DASHBOARD WRAPPER ================= -->
+  <div id="dashboard-wrapper" class="dashboard-wrapper">
+    <!-- Sidebar Navigation -->
+    <aside class="sidebar">
+      <div class="sidebar-header">
+        <div class="logo">
+          <i data-lucide="compass" class="logo-icon"></i>
+          <span>Voyage<span>IQ</span></span>
+        </div>
+        <span class="badge badge-accent">Admin Portal</span>
+      </div>
+
+      <nav class="sidebar-nav">
+        <ul>
+          <li class="active" data-tab="overview">
+            <a href="#overview">
+              <i data-lucide="layout-dashboard"></i>
+              <span>Overview</span>
+            </a>
+          </li>
+          <li data-tab="bookings">
+            <a href="#bookings">
+              <i data-lucide="shopping-bag"></i>
+              <span>Bookings</span>
+            </a>
+          </li>
+          <li data-tab="trips">
+            <a href="#trips">
+              <i data-lucide="map"></i>
+              <span>Trips</span>
+            </a>
+          </li>
+          <li data-tab="ai-planner">
+            <a href="#ai-planner">
+              <i data-lucide="cpu"></i>
+              <span>AI Planner</span>
+            </a>
+          </li>
+          <li data-tab="users">
+            <a href="#users">
+              <i data-lucide="users"></i>
+              <span>Users</span>
+            </a>
+          </li>
+          <li data-tab="reviews">
+            <a href="#reviews">
+              <i data-lucide="star"></i>
+              <span>Reviews</span>
+            </a>
+          </li>
+        </ul>
+      </nav>
+
+      <div class="sidebar-footer">
+        <div class="theme-toggle-container" style="margin-bottom:12px;">
+          <span class="theme-label">Dark Mode</span>
+          <button id="theme-toggle-btn" class="theme-toggle-btn" aria-label="Toggle theme">
+            <div class="toggle-circle"></div>
+          </button>
+        </div>
+        <button id="logout-btn" class="btn btn-outline" style="width:100%; justify-content:center;">
+          <i data-lucide="log-out"></i>
+          <span>Logout</span>
+        </button>
+      </div>
+    </aside>
+
+    <!-- Main Content Area -->
+    <main class="main-content">
+      <!-- Top Navbar -->
+      <header class="top-navbar">
+        <div class="header-title">
+          <h1 id="page-title-heading">Overview</h1>
+          <p id="page-subtitle">Real-time vacation planner performance & insights</p>
+        </div>
+        <div class="header-actions">
+          <!-- Button to trigger trip modal from anywhere, visible on Trips tab, but we will make it dynamic -->
+          <button class="btn btn-primary" id="add-trip-global-btn" style="display:none;">
+            <i data-lucide="plus-circle"></i>
+            <span>Add Trip Package</span>
+          </button>
+          <button class="btn btn-outline" id="refresh-data-btn">
+            <i data-lucide="refresh-cw"></i>
+            <span>Refresh Data</span>
+          </button>
+          <div class="user-avatar-container">
+            <div class="avatar" id="admin-initial">A</div>
+            <div class="user-info">
+              <span class="user-name" id="admin-name">Organizer Portal</span>
+              <span class="user-role">Super Organizer</span>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <!-- Scrollable Panel -->
+      <div class="content-scroll-container">
+        
+        <!-- ================= OVERVIEW TAB ================= -->
+        <section id="tab-overview" class="tab-panel active">
+          <!-- KPI Stats Grid -->
+          <div class="kpi-grid">
+            <div class="kpi-card card-glow-blue">
+              <div class="kpi-header">
+                <span class="kpi-title">Total Revenue</span>
+                <div class="kpi-icon-container blue">
+                  <i data-lucide="indian-rupee"></i>
+                </div>
+              </div>
+              <div class="kpi-value" id="kpi-revenue">₹0.00</div>
+              <div class="kpi-footer">
+                <span class="trend-positive"><i data-lucide="trending-up"></i> Active Earnings</span>
+              </div>
+            </div>
+
+            <div class="kpi-card card-glow-purple">
+              <div class="kpi-header">
+                <span class="kpi-title">Total Bookings</span>
+                <div class="kpi-icon-container purple">
+                  <i data-lucide="calendar-check"></i>
+                </div>
+              </div>
+              <div class="kpi-value" id="kpi-bookings">0</div>
+              <div class="kpi-footer">
+                <span id="kpi-bookings-confirmed-sub" class="trend-neutral">0 Confirmed</span>
+              </div>
+            </div>
+
+            <div class="kpi-card card-glow-emerald">
+              <div class="kpi-header">
+                <span class="kpi-title">Active Packages</span>
+                <div class="kpi-icon-container emerald">
+                  <i data-lucide="map-pin"></i>
+                </div>
+              </div>
+              <div class="kpi-value" id="kpi-trips">0</div>
+              <div class="kpi-footer">
+                <span id="kpi-trips-ratio" class="trend-positive">0% Live Rate</span>
+              </div>
+            </div>
+
+            <div class="kpi-card card-glow-amber">
+              <div class="kpi-header">
+                <span class="kpi-title">Avg Trip Rating</span>
+                <div class="kpi-icon-container amber">
+                  <i data-lucide="star"></i>
+                </div>
+              </div>
+              <div class="kpi-value" id="kpi-rating">0.0</div>
+              <div class="kpi-footer">
+                <span class="trend-positive"><i data-lucide="award"></i> Top Customer Trust</span>
+              </div>
+            </div>
+
+            <div class="kpi-card card-glow-pink">
+              <div class="kpi-header">
+                <span class="kpi-title">AI Outlines</span>
+                <div class="kpi-icon-container pink">
+                  <i data-lucide="cpu"></i>
+                </div>
+              </div>
+              <div class="kpi-value" id="kpi-ai-plans">0</div>
+              <div class="kpi-footer">
+                <span class="trend-positive"><i data-lucide="sparkles"></i> AI Generated Plans</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Charts Grid -->
+          <div class="charts-grid">
+            <div class="chart-container large">
+              <div class="chart-header">
+                <h3>Monthly Booking & Revenue Trends</h3>
+                <span class="chart-subtitle">Order counts and volume over the last 12 months</span>
+              </div>
+              <div class="chart-wrapper">
+                <canvas id="chart-trends"></canvas>
+              </div>
+            </div>
+
+            <div class="chart-container">
+              <div class="chart-header">
+                <h3>Revenue by Trip Category</h3>
+                <span class="chart-subtitle">Contribution percentage per category</span>
+              </div>
+              <div class="chart-wrapper">
+                <canvas id="chart-categories"></canvas>
+              </div>
+            </div>
+
+            <div class="chart-container">
+              <div class="chart-header">
+                <h3>AI Planner Styles</h3>
+                <span class="chart-subtitle">Popular travel configurations requested by users</span>
+              </div>
+              <div class="chart-wrapper">
+                <canvas id="chart-ai-styles"></canvas>
+              </div>
+            </div>
+
+            <div class="chart-container large">
+              <div class="chart-header">
+                <h3>Top 5 AI Destinations</h3>
+                <span class="chart-subtitle">Most requested custom itineraries</span>
+              </div>
+              <div class="chart-wrapper">
+                <canvas id="chart-ai-destinations"></canvas>
+              </div>
+            </div>
+          </div>
+        </section>
+
+
+        <!-- ================= BOOKINGS TAB ================= -->
+        <section id="tab-bookings" class="tab-panel">
+          <div class="table-card">
+            <div class="table-header-controls">
+              <div class="search-box">
+                <i data-lucide="search"></i>
+                <input type="text" id="search-bookings" placeholder="Search by traveler, trip name or status...">
+              </div>
+              <div class="filters-actions">
+                <select id="filter-bookings-status" class="filter-dropdown">
+                  <option value="all">All Statuses</option>
+                  <option value="pending">Pending</option>
+                  <option value="confirmed">Confirmed</option>
+                  <option value="cancelled">Cancelled</option>
+                  <option value="completed">Completed</option>
+                </select>
+                <button class="btn btn-emerald btn-export" data-target="bookings">
+                  <i data-lucide="download"></i>
+                  <span>Export CSV</span>
+                </button>
+              </div>
+            </div>
+
+            <div class="table-responsive">
+              <table id="table-bookings-list">
+                <thead>
+                  <tr>
+                    <th>ID</th>
+                    <th>Traveler</th>
+                    <th>Trip Package</th>
+                    <th>Travel Date</th>
+                    <th>Travelers</th>
+                    <th>Total Price</th>
+                    <th>Status</th>
+                    <th>Created At</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <!-- Filled by JS -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+
+        <!-- ================= TRIPS TAB ================= -->
+        <section id="tab-trips" class="tab-panel">
+          <div class="table-card">
+            <div class="table-header-controls">
+              <div class="search-box">
+                <i data-lucide="search"></i>
+                <input type="text" id="search-trips" placeholder="Search by name, location or category...">
+              </div>
+              <div class="filters-actions">
+                <select id="filter-trips-status" class="filter-dropdown">
+                  <option value="all">All Packages</option>
+                  <option value="active">Active Only</option>
+                  <option value="inactive">Inactive Only</option>
+                </select>
+                <select id="filter-trips-category" class="filter-dropdown">
+                  <option value="all">All Categories</option>
+                  <option value="Beach">Beach</option>
+                  <option value="Mountains">Mountains</option>
+                  <option value="Adventure">Adventure</option>
+                  <option value="Family">Family</option>
+                  <option value="Honeymoon">Honeymoon</option>
+                </select>
+                <button class="btn btn-primary" id="add-trip-btn-tab">
+                  <i data-lucide="plus-circle"></i>
+                  <span>Add Trip</span>
+                </button>
+                <button class="btn btn-emerald btn-export" data-target="trips">
+                  <i data-lucide="download"></i>
+                  <span>Export CSV</span>
+                </button>
+              </div>
+            </div>
+
+            <div class="table-responsive">
+              <table id="table-trips-list">
+                <thead>
+                  <tr>
+                    <th>ID</th>
+                    <th>Trip Name</th>
+                    <th>Category</th>
+                    <th>Location</th>
+                    <th>Duration</th>
+                    <th>Base Price</th>
+                    <th>Bookings Count</th>
+                    <th>Total Revenue</th>
+                    <th>Avg Rating</th>
+                    <th>Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <!-- Filled by JS -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+
+        <!-- ================= AI PLANNER TAB ================= -->
+        <section id="tab-ai-planner" class="tab-panel">
+          <div class="table-card">
+            <div class="table-header-controls">
+              <div class="search-box">
+                <i data-lucide="search"></i>
+                <input type="text" id="search-ai-plans" placeholder="Search by traveler, destination, style...">
+              </div>
+              <div class="filters-actions">
+                <select id="filter-ai-style" class="filter-dropdown">
+                  <option value="all">All Styles</option>
+                  <option value="Luxury">Luxury</option>
+                  <option value="Budget">Budget</option>
+                  <option value="Adventure">Adventure</option>
+                  <option value="Family">Family</option>
+                  <option value="Solo">Solo</option>
+                </select>
+                <button class="btn btn-emerald btn-export" data-target="ai-plans">
+                  <i data-lucide="download"></i>
+                  <span>Export CSV</span>
+                </button>
+              </div>
+            </div>
+
+            <div class="table-responsive">
+              <table id="table-ai-plans-list">
+                <thead>
+                  <tr>
+                    <th>ID</th>
+                    <th>Traveler</th>
+                    <th>Destination</th>
+                    <th>Budget</th>
+                    <th>Days</th>
+                    <th>Travelers</th>
+                    <th>Style</th>
+                    <th>Generated Date</th>
+                    <th>Plan</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <!-- Filled by JS -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+
+        <!-- ================= USERS TAB ================= -->
+        <section id="tab-users" class="tab-panel">
+          <div class="table-card">
+            <div class="table-header-controls">
+              <div class="search-box">
+                <i data-lucide="search"></i>
+                <input type="text" id="search-users" placeholder="Search by name, email or phone...">
+              </div>
+              <div class="filters-actions">
+                <select id="filter-users-role" class="filter-dropdown">
+                  <option value="all">All Roles</option>
+                  <option value="traveler">Traveler</option>
+                  <option value="organizer">Organizer</option>
+                  <option value="admin">Admin</option>
+                </select>
+                <button class="btn btn-emerald btn-export" data-target="users">
+                  <i data-lucide="download"></i>
+                  <span>Export CSV</span>
+                </button>
+              </div>
+            </div>
+
+            <div class="table-responsive">
+              <table id="table-users-list">
+                <thead>
+                  <tr>
+                    <th>ID</th>
+                    <th>Name</th>
+                    <th>Email</th>
+                    <th>Phone</th>
+                    <th>Role</th>
+                    <th>Registered Date</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <!-- Filled by JS -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+
+        <!-- ================= REVIEWS TAB ================= -->
+        <section id="tab-reviews" class="tab-panel">
+          <div class="table-card">
+            <div class="table-header-controls">
+              <div class="search-box">
+                <i data-lucide="search"></i>
+                <input type="text" id="search-reviews" placeholder="Search by traveler, trip package or review text...">
+              </div>
+              <div class="filters-actions">
+                <select id="filter-reviews-rating" class="filter-dropdown">
+                  <option value="all">All Ratings</option>
+                  <option value="5">5 Stars</option>
+                  <option value="4">4 Stars</option>
+                  <option value="3">3 Stars</option>
+                  <option value="2">2 Stars</option>
+                  <option value="1">1 Star</option>
+                </select>
+                <button class="btn btn-emerald btn-export" data-target="reviews">
+                  <i data-lucide="download"></i>
+                  <span>Export CSV</span>
+                </button>
+              </div>
+            </div>
+
+            <div class="table-responsive">
+              <table id="table-reviews-list">
+                <thead>
+                  <tr>
+                    <th>ID</th>
+                    <th>Traveler</th>
+                    <th>Trip Package</th>
+                    <th>Rating</th>
+                    <th>Review Comment</th>
+                    <th>Submitted Date</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <!-- Filled by JS -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+      </div>
+    </main>
+  </div>
+
+  <!-- ================= ADD TRIP PACKAGE MODAL ================= -->
+  <div class="modal-overlay" id="add-trip-modal">
+    <div class="modal-card wide">
+      <div class="modal-header">
+        <h3>Create New Trip Package</h3>
+        <button class="modal-close-btn" id="add-trip-close-btn">&times;</button>
+      </div>
+      <form id="trip-create-form" class="trip-form">
+        <div class="modal-body" style="max-height: calc(80vh - 120px); overflow-y: auto;">
+          <div id="form-error" class="alert alert-error" style="display:none; margin-bottom:1rem;"></div>
+          <div id="form-success" class="alert alert-success" style="display:none; margin-bottom:1rem;"></div>
+          
+          <div class="form-grid">
+            <label>
+              Trip Name
+              <input type="text" id="trip-name" required placeholder="e.g. Kyoto Cherry Blossom Special">
+            </label>
+            <label>
+              Category
+              <select id="trip-category">
+                <option value="Beach">Beach</option>
+                <option value="Mountains">Mountains</option>
+                <option value="Adventure">Adventure</option>
+                <option value="Family">Family</option>
+                <option value="Honeymoon">Honeymoon</option>
+              </select>
+            </label>
+            <label>
+              Location
+              <input type="text" id="trip-location" required placeholder="e.g. Kyoto, Japan">
+            </label>
+            <label>
+              Duration Days
+              <input type="number" id="trip-days" required min="1" max="30" value="5">
+            </label>
+            <label>
+              Base Price (INR)
+              <input type="number" id="trip-price" required min="0" value="25000">
+            </label>
+            <label>
+              Image URL
+              <input type="url" id="trip-image" required placeholder="https://images.unsplash.com/photo-...">
+            </label>
+          </div>
+
+          <label style="margin-top:1.25rem;">
+            Short Description
+            <textarea id="trip-short-desc" required maxLength="500" placeholder="Brief visual overview text (max 500 characters)..."></textarea>
+          </label>
+
+          <label style="margin-top:1.25rem;">
+            Full Detailed Description
+            <textarea id="trip-full-desc" required placeholder="Complete detailed package itinerary synopsis, accommodations summary, and transfers details..."></textarea>
+          </label>
+
+          <!-- Dynamic Inclusions -->
+          <div class="dynamic-section" style="margin-top:1.5rem;">
+            <h3>Inclusions</h3>
+            <div id="inclusions-container">
+              <!-- JS builds rows here -->
+            </div>
+            <button type="button" class="btn btn-secondary btn-sm" id="btn-add-inclusion">
+              <i data-lucide="plus"></i> Add Inclusion
+            </button>
+          </div>
+
+          <!-- Dynamic Highlights -->
+          <div class="dynamic-section" style="margin-top:1.5rem;">
+            <h3>Highlights</h3>
+            <div id="highlights-container">
+              <!-- JS builds rows here -->
+            </div>
+            <button type="button" class="btn btn-secondary btn-sm" id="btn-add-highlight">
+              <i data-lucide="plus"></i> Add Highlight
+            </button>
+          </div>
+
+          <!-- Dynamic Daily Itinerary Descriptions -->
+          <div class="dynamic-section" style="margin-top:1.5rem;">
+            <h3>Day-by-Day Itinerary (<span id="itinerary-days-indicator">5</span> Days)</h3>
+            <div id="itinerary-container">
+              <!-- Auto generated based on duration days input -->
+            </div>
+          </div>
+        </div>
+        
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" id="add-trip-cancel-btn">Cancel</button>
+          <button type="submit" class="btn btn-primary">Publish Trip Package</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ================= DETAIL DETAILS MODAL ================= -->
+  <div class="modal-overlay" id="detail-modal">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3 id="modal-title">Details</h3>
+        <button class="modal-close-btn" id="modal-close-btn">&times;</button>
+      </div>
+      <div class="modal-body" id="modal-body">
+        <!-- Rendered dynamically -->
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" id="modal-close-action-btn">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Custom JS -->
+  <script src="app.js"></script>
+</body>
+</html>

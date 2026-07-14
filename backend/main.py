@@ -45,6 +45,7 @@ class RegisterSchema(BaseModel):
     name: str = Field(..., min_length=2, max_length=100)
     email: EmailStr
     password: str = Field(..., min_length=6)
+    role: Optional[str] = "traveler"
 
 class LoginSchema(BaseModel):
     email: EmailStr
@@ -66,6 +67,20 @@ class AIPlannerSchema(BaseModel):
     accommodation_type: Optional[str] = None
     special_requirements: Optional[str] = None
 
+class TripCreateSchema(BaseModel):
+    name: str = Field(..., min_length=2, max_length=150)
+    category: str  # Beach, Mountains, Adventure, Family, Honeymoon
+    location: str = Field(..., min_length=2, max_length=150)
+    duration_days: int = Field(..., ge=1)
+    duration_nights: int = Field(..., ge=0)
+    price_rupees: int = Field(..., ge=0)
+    image_url: str = Field(..., min_length=10)
+    short_description: str = Field(..., min_length=10, max_length=500)
+    full_description: str = Field(..., min_length=10)
+    inclusions: List[str] = []
+    highlights: List[str] = []
+    itinerary: List[str] = []
+
 # --- AUTH ROUTES ---
 
 @app.post("/api/auth/register")
@@ -83,21 +98,23 @@ def register_user(payload: RegisterSchema):
             
             # Hash password and insert
             pwd_hash = hash_password(payload.password)
+            user_role = payload.role if payload.role in ['traveler', 'organizer', 'admin'] else 'traveler'
             cursor.execute(
-                "INSERT INTO users (full_name, email, password_hash) VALUES (%s, %s, %s)",
-                (payload.name, payload.email, pwd_hash)
+                "INSERT INTO users (full_name, email, password_hash, role) VALUES (%s, %s, %s, %s)",
+                (payload.name, payload.email, pwd_hash, user_role)
             )
             user_id = cursor.lastrowid
             
             # Generate JWT token
-            token = create_access_token({"sub": str(user_id), "email": payload.email, "name": payload.name})
+            token = create_access_token({"sub": str(user_id), "email": payload.email, "name": payload.name, "role": user_role})
             
             return {
                 "token": token,
                 "user": {
                     "id": user_id,
                     "name": payload.name,
-                    "email": payload.email
+                    "email": payload.email,
+                    "role": user_role
                 }
             }
     finally:
@@ -193,6 +210,88 @@ def get_trips(category: Optional[str] = None):
     finally:
         conn.close()
 
+
+@app.post("/api/trips")
+def create_trip(payload: TripCreateSchema, user_payload: dict = Depends(get_current_user_payload)):
+    user_id = int(user_payload["sub"])
+    conn = get_db_connection()
+    try:
+        with conn.cursor() as cursor:
+            # Verify organizer / admin role
+            cursor.execute("SELECT role FROM users WHERE id = %s", (user_id,))
+            user = cursor.fetchone()
+            if not user or user["role"] not in ["organizer", "admin"]:
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="Only organizers or administrators can create trip packages."
+                )
+            
+            # Generate unique slug
+            base_slug = re.sub(r"[^a-z0-9]+", "-", payload.name.lower()).strip("-")
+            slug = base_slug
+            counter = 1
+            while True:
+                cursor.execute("SELECT id FROM trips WHERE slug = %s", (slug,))
+                if not cursor.fetchone():
+                    break
+                slug = f"{base_slug}-{counter}"
+                counter += 1
+
+            # Convert price to paise
+            price_paise = payload.price_rupees * 100
+
+            # Insert into trips table
+            cursor.execute(
+                """
+                INSERT INTO trips (slug, name, category, location, duration_days, duration_nights, price_paise, image_url, short_description, full_description, is_featured, is_active)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, FALSE, TRUE)
+                """,
+                (slug, payload.name, payload.category, payload.location, payload.duration_days, payload.duration_nights, price_paise, payload.image_url, payload.short_description, payload.full_description)
+            )
+            trip_id = cursor.lastrowid
+
+            # Insert inclusions
+            for inc in payload.inclusions:
+                if inc.strip():
+                    cursor.execute(
+                        "INSERT INTO trip_inclusions (trip_id, inclusion_name) VALUES (%s, %s)",
+                        (trip_id, inc.strip())
+                    )
+
+            # Insert highlights
+            for idx, hl in enumerate(payload.highlights):
+                if hl.strip():
+                    cursor.execute(
+                        "INSERT INTO trip_highlights (trip_id, highlight_text, sort_order) VALUES (%s, %s, %s)",
+                        (trip_id, hl.strip(), idx + 1)
+                    )
+
+            # Insert itinerary days
+            for idx, day_desc in enumerate(payload.itinerary):
+                if day_desc.strip():
+                    day_num = idx + 1
+                    cursor.execute(
+                        "INSERT INTO trip_itinerary_days (trip_id, day_number, title, description) VALUES (%s, %s, %s, %s)",
+                        (trip_id, day_num, f"Day {day_num}", day_desc.strip())
+                    )
+
+            return {
+                "ok": True,
+                "trip_id": trip_id,
+                "slug": slug,
+                "name": payload.name
+            }
+    except Exception as e:
+        if isinstance(e, HTTPException):
+            raise e
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to create trip package: {str(e)}"
+        )
+    finally:
+        conn.close()
+
+
 @app.get("/api/trips/{slug}")
 def get_trip_details(slug: str):
     conn = get_db_connection()
@@ -287,17 +386,37 @@ def get_user_bookings(user_payload: dict = Depends(get_current_user_payload)):
     conn = get_db_connection()
     try:
         with conn.cursor() as cursor:
-            cursor.execute(
-                """
-                SELECT b.id, b.travel_date, b.travelers_count, b.total_price_paise, b.status, b.special_requests,
-                       t.name as trip_name, t.location as trip_location, t.image_url as trip_image, t.slug as trip_slug
-                FROM bookings b
-                JOIN trips t ON b.trip_id = t.id
-                WHERE b.user_id = %s
-                ORDER BY b.created_at DESC
-                """,
-                (user_id,)
-            )
+            # Check user role
+            cursor.execute("SELECT role FROM users WHERE id = %s", (user_id,))
+            user_role_res = cursor.fetchone()
+            role = user_role_res["role"] if user_role_res else "traveler"
+            
+            if role in ["organizer", "admin"]:
+                cursor.execute(
+                    """
+                    SELECT b.id, b.travel_date, b.travelers_count, b.total_price_paise, b.status, b.special_requests,
+                           t.name as trip_name, t.location as trip_location, t.image_url as trip_image, t.slug as trip_slug,
+                           u.full_name as user_name, u.email as user_email
+                    FROM bookings b
+                    JOIN trips t ON b.trip_id = t.id
+                    JOIN users u ON b.user_id = u.id
+                    ORDER BY b.created_at DESC
+                    """
+                )
+            else:
+                cursor.execute(
+                    """
+                    SELECT b.id, b.travel_date, b.travelers_count, b.total_price_paise, b.status, b.special_requests,
+                           t.name as trip_name, t.location as trip_location, t.image_url as trip_image, t.slug as trip_slug,
+                           u.full_name as user_name, u.email as user_email
+                    FROM bookings b
+                    JOIN trips t ON b.trip_id = t.id
+                    JOIN users u ON b.user_id = u.id
+                    WHERE b.user_id = %s
+                    ORDER BY b.created_at DESC
+                    """,
+                    (user_id,)
+                )
             bookings = cursor.fetchall()
             
             result = []
@@ -309,6 +428,8 @@ def get_user_bookings(user_payload: dict = Depends(get_current_user_payload)):
                     "total_price": format_inr(b["total_price_paise"]),
                     "status": b["status"].capitalize(),
                     "special_requests": b["special_requests"],
+                    "user_name": b["user_name"],
+                    "user_email": b["user_email"],
                     "trip": {
                         "slug": b["trip_slug"],
                         "name": b["trip_name"],
@@ -442,15 +563,33 @@ def get_user_plans(user_payload: dict = Depends(get_current_user_payload)):
     conn = get_db_connection()
     try:
         with conn.cursor() as cursor:
-            cursor.execute(
-                """
-                SELECT id, destination, budget_paise, number_of_days, travelers_count, travel_style, transportation_preference, accommodation_type, special_requirements, generated_plan, created_at
-                FROM ai_planner_requests
-                WHERE user_id = %s
-                ORDER BY created_at DESC
-                """,
-                (user_id,)
-            )
+            # Check user role
+            cursor.execute("SELECT role FROM users WHERE id = %s", (user_id,))
+            user_role_res = cursor.fetchone()
+            role = user_role_res["role"] if user_role_res else "traveler"
+            
+            if role in ["organizer", "admin"]:
+                cursor.execute(
+                    """
+                    SELECT r.id, r.destination, r.budget_paise, r.number_of_days, r.travelers_count, r.travel_style, r.transportation_preference, r.accommodation_type, r.special_requirements, r.generated_plan, r.created_at,
+                           u.full_name as user_name, u.email as user_email
+                    FROM ai_planner_requests r
+                    JOIN users u ON r.user_id = u.id
+                    ORDER BY r.created_at DESC
+                    """
+                )
+            else:
+                cursor.execute(
+                    """
+                    SELECT r.id, r.destination, r.budget_paise, r.number_of_days, r.travelers_count, r.travel_style, r.transportation_preference, r.accommodation_type, r.special_requirements, r.generated_plan, r.created_at,
+                           u.full_name as user_name, u.email as user_email
+                    FROM ai_planner_requests r
+                    JOIN users u ON r.user_id = u.id
+                    WHERE r.user_id = %s
+                    ORDER BY r.created_at DESC
+                    """,
+                    (user_id,)
+                )
             plans = cursor.fetchall()
             
             result = []
@@ -466,6 +605,8 @@ def get_user_plans(user_payload: dict = Depends(get_current_user_payload)):
                     "accommodation": p["accommodation_type"],
                     "requirements": p["special_requirements"],
                     "plan": p["generated_plan"],
+                    "user_name": p["user_name"],
+                    "user_email": p["user_email"],
                     "created_at": p["created_at"].strftime("%b %d, %Y %I:%M %p") if isinstance(p["created_at"], (date, datetime)) else str(p["created_at"])
                 })
             return result
