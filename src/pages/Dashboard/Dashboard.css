@@ -1,0 +1,8 @@
+.dashboard-page {
+  background: var(--bg);
+}
+
+.dashboard-grid {
+  display: grid;
+  gap: 26px;
+}
