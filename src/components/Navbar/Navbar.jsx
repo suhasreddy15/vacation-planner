@@ -1,6 +1,7 @@
 import { useState } from 'react';
-import { NavLink } from 'react-router-dom';
-import { FiMenu, FiX, FiMap } from 'react-icons/fi';
+import { NavLink, useNavigate } from 'react-router-dom';
+import { FiLogIn, FiLogOut, FiMenu, FiUserPlus, FiX, FiMap } from 'react-icons/fi';
+import { useAuth } from '../../context/AuthContext.jsx';
 import './Navbar.css';
 
 const navItems = [
@@ -12,6 +13,14 @@ const navItems = [
 
 function Navbar() {
   const [isOpen, setIsOpen] = useState(false);
+  const navigate = useNavigate();
+  const { currentUser, isAuthenticated, logout } = useAuth();
+
+  const handleLogout = () => {
+    logout();
+    setIsOpen(false);
+    navigate('/');
+  };
 
   return (
     <header className="navbar">
@@ -44,6 +53,40 @@ function Navbar() {
               {item.label}
             </NavLink>
           ))}
+          <div className="navbar__auth">
+            {isAuthenticated ? (
+              <>
+                <span className="navbar__user">Hi, {currentUser.name.split(' ')[0]}</span>
+                <button className="navbar__auth-button" type="button" onClick={handleLogout}>
+                  <FiLogOut />
+                  Logout
+                </button>
+              </>
+            ) : (
+              <>
+                <NavLink
+                  to="/login"
+                  onClick={() => setIsOpen(false)}
+                  className={({ isActive }) =>
+                    isActive ? 'navbar__auth-link active' : 'navbar__auth-link'
+                  }
+                >
+                  <FiLogIn />
+                  Login
+                </NavLink>
+                <NavLink
+                  to="/register"
+                  onClick={() => setIsOpen(false)}
+                  className={({ isActive }) =>
+                    isActive ? 'navbar__auth-link active' : 'navbar__auth-link'
+                  }
+                >
+                  <FiUserPlus />
+                  Register
+                </NavLink>
+              </>
+            )}
+          </div>
         </div>
       </nav>
     </header>
