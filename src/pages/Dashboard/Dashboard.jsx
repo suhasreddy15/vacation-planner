@@ -64,7 +64,7 @@ function Dashboard() {
 
       <section className="section dashboard-page">
         <div className="container" style={{ display: 'flex', flexDirection: 'column', gap: '3rem' }}>
-          
+
           {/* Main Actions */}
           <div className="dashboard-grid">
             <DashboardCard
@@ -89,7 +89,7 @@ function Dashboard() {
 
           {/* Bookings & Itineraries split */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '2.5rem' }}>
-            
+
             {/* Active Bookings */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
               <h2 style={{ fontSize: '1.4rem', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>

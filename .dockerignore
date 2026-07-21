@@ -1,0 +1,16 @@
+node_modules
+.venv
+.git
+.gitignore
+.agents
+.vscode
+dist
+*.log
+backend/__pycache__
+dashboard/__pycache__
+admin/__pycache__
+venv
+Dockerfile
+docker-compose.yml
+README.md
+database
